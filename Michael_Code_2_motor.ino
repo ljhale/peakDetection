@@ -14,7 +14,6 @@
 #define TRAVELDELAY 650 //in ms
 #define SYSTEMDELAY 1500 
 #define L_THRESH 150 //550, (0,1024)
-#define H_THRESH 150 //get better number from someone
 #define RELAXTHRESH 150 // 550 
 
 // #define the location of the new stuff, and probably change the old stuff
@@ -45,7 +44,7 @@ void setup() {
   digitalWrite(MOSFET_PIN_2, LOW);
   Serial.begin(9600);
 }
-
+/*
 //Make an actual template function since this is absolute trash
 void servo_logic(int &position, Servo &servo_1, Servo &servo_2, int mos_1, int mos_2 ){ // see what else needs to be passed in, probably the delay or serial ?
   //OPEN to CLOSE
@@ -71,7 +70,7 @@ void servo_logic(int &position, Servo &servo_1, Servo &servo_2, int mos_1, int m
     Serial.println("arm relaxed");
   }
 }
-
+*/
 void servo_logic(int &pos, Servo &servo, int mos){
     if (position == OPEN){
     //digitalWrite(MOSFET_PIN_1,HIGH);
@@ -92,8 +91,6 @@ void servo_logic(int &pos, Servo &servo, int mos){
   }
 }
 
-
-
 void loop() {
 
 //Wait for Muscle Signal
@@ -102,48 +99,45 @@ while ( analogRead(MYO_PIN) < L_THRESH ) {
   }
 
 //Count up Signal Width 
-int count_low = 0,count_high = 0, count_both = 0;
-while (analogRead(MYO_PIN) > L_THRESH && analogRead(MYO_PIN) < H_THRESH) {
+int count = 0;
+int flex_count = 0;
+while (analogRead(MYO_PIN) > THRESH) {
   delay(1);
-  count_low += 1;
-  if (count_low>=PULSEWIDTH) {break;} // do we need the break statement if the function is defined?
+  count += 1;
+  if (count>=PULSEWIDTH) {break;} // do we need the break statement if the function is defined?
 }
 
 //Toggle Servo Logic
-if (count_low >= PULSEWIDTH){
-  servo_logic(ti_pos, ti_servo,mos_1); 
-    //Keep Signal to Actuation Delay around 1 second.
-  delay(SYSTEMDELAY-PULSEWIDTH-TRAVELDELAY);
+//Keep Signal to Actuation Delay around 1 second.
+if (count >= PULSEWIDTH){
+  // We start up with a closed hand
+/*
+ *   if(flex_count == 
+ */
+  if(flex_count %4 ==0){
+    // open thumb and index finger - finger gun?
+    servo_logic(ti_pos, ti_servo,mos_1); 
+    delay(SYSTEMDELAY-PULSEWIDTH-TRAVELDELAY);
+  }
+  else if (flex_count %4 == 1){
+    //open entire hand by opening middle, ring, and pinky fingers.
+    servo_logic(mrp_pos, mrp_servo,mos_1); 
+    delay(SYSTEMDELAY-PULSEWIDTH-TRAVELDELAY);
+  }
+  
+  else if (flex_count %4 ==2){
+    // close thumb and index to get open mrp only position
+    servo_logic(ti_pos, ti_servo,mos_1); 
+    delay(SYSTEMDELAY-PULSEWIDTH-TRAVELDELAY);
+  }
+  else if (flex_count %4 ==3){
+    //close mrp to get closed hand
+    servo_logic(mrp_pos, mrp_servo,mos_1); 
+    delay(SYSTEMDELAY-PULSEWIDTH-TRAVELDELAY);
+  }
+  ++flex_count;
 }
-
-while(analogRead(MYO_PIN) > H_THRESH && H_THRESH == L_THRESH){
-  delay(1);
-  count_both += 1;
-  if(count_both >= PULSEWIDTH){break;}
-}
-
-//Toggle Servo Logic
-if (count_low >= PULSEWIDTH){
-  servo_logic(ti_pos, ti_servo, mrp_servo,mos_1, mos_2); 
-    //Keep Signal to Actuation Delay around 1 second.
-  delay(SYSTEMDELAY-PULSEWIDTH-TRAVELDELAY);
-}
-
-while(analogRead(MYO_PIN) > H_THRESH){
-  delay(1);
-  count_high += 1; 
-  if(count_high >= PULSEWIDTH){break;}
-}
-
-//Toggle Servo Logic
-if(count_high >= PULSEWIDTH){
-  servo_logic(mrp_pos,ti_servo, mrp_servo,mos_1, mos_2);
-      //Keep Signal to Actuation Delay around 1 second.
-  delay(SYSTEMDELAY-PULSEWIDTH-TRAVELDELAY);
-}
-
 
 //Wait for arm to relax again
 while ( analogRead(MYO_PIN) > RELAXTHRESH ) {}
-// How would this be adapted for a double motor system?
 }
