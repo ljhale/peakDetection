@@ -1,19 +1,18 @@
-/*Michael Code [4/11/18] */
+/*Michael Code [2/11/19] */
 
 #include <Servo.h>
 #define TI_SERVO_PIN 11//10
-
 #define MRP_SERVO_PIN 10 // check in with hardware to make sure 
 #define MOSFET_PIN_1 13//13
 #define MOSFET_PIN_2 3//3
 
-#define MYO_PIN A2//A2
+#define MYO_PIN A1//A2
 #define OPEN 0
 #define CLOSE 180
 #define PULSEWIDTH 50 //in ms
 #define TRAVELDELAY 650 //in ms
 #define SYSTEMDELAY 1500 
-#define L_THRESH 150 //550, (0,1024)
+#define THRESH 150 //550, (0,1024)
 #define RELAXTHRESH 150 // 550 
 
 // #define the location of the new stuff, and probably change the old stuff
@@ -24,6 +23,8 @@ int ti_pos = OPEN;// position of ti_servo
 int mrp_pos = OPEN;//position of mrp_servo
 int mos_1 = MOSFET_PIN_1;
 int mos_2 = MOSFET_PIN_2;
+int flex_count = 0;
+
 //
 void setup() {
   //Setup IO
@@ -72,35 +73,36 @@ void servo_logic(int &position, Servo &servo_1, Servo &servo_2, int mos_1, int m
 }
 */
 void servo_logic(int &pos, Servo &servo, int mos){
-    if (position == OPEN){
+    if (pos == OPEN){
     //digitalWrite(MOSFET_PIN_1,HIGH);
     pos = CLOSE;
     servo.write(CLOSE);
     delay(TRAVELDELAY);
-    Serial.println("arm closed");
+    Serial.println("Closed motor connected to mosfet pin at: ");
+    Serial.println(mos);
     digitalWrite(mos,LOW);
   }
   //CLOSE to OPEN
- else if (position == CLOSE){
+  else{
     digitalWrite(mos,HIGH);
     pos = OPEN;
     servo.write(OPEN);
     delay(TRAVELDELAY);
     //digitalWrite(MOSFET_PIN,LOW);
-    Serial.println("arm relaxed");
+    Serial.println("Opened motor connected to mosfet pin at: ");
+    Serial.println(mos);
   }
 }
 
 void loop() {
 
 //Wait for Muscle Signal
-while ( analogRead(MYO_PIN) < L_THRESH ) {
+while ( analogRead(MYO_PIN) < THRESH ) {
   Serial.println(analogRead(MYO_PIN));
   }
 
 //Count up Signal Width 
 int count = 0;
-int flex_count = 0;
 while (analogRead(MYO_PIN) > THRESH) {
   delay(1);
   count += 1;
@@ -121,7 +123,7 @@ if (count >= PULSEWIDTH){
   }
   else if (flex_count %4 == 1){
     //open entire hand by opening middle, ring, and pinky fingers.
-    servo_logic(mrp_pos, mrp_servo,mos_1); 
+    servo_logic(mrp_pos, mrp_servo,mos_2); 
     delay(SYSTEMDELAY-PULSEWIDTH-TRAVELDELAY);
   }
   
@@ -132,7 +134,7 @@ if (count >= PULSEWIDTH){
   }
   else if (flex_count %4 ==3){
     //close mrp to get closed hand
-    servo_logic(mrp_pos, mrp_servo,mos_1); 
+    servo_logic(mrp_pos, mrp_servo,mos_2); 
     delay(SYSTEMDELAY-PULSEWIDTH-TRAVELDELAY);
   }
   ++flex_count;
